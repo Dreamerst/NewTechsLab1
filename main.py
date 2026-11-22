@@ -8,9 +8,9 @@ HEADERS = {
 }
 
 
-def page_urls(text, page):
+def page_urls(text, page, extra):
     r = requests.get("https://yandex.ru/images/search",
-                     params={"text": text, "p": page, "itype": "jpg"},
+                     params={"text": text, "p": page, "itype": "jpg", **extra},
                      headers=HEADERS, timeout=15)
     app = BeautifulSoup(r.content, "html.parser").find(
         "div", id=lambda x: x and x.startswith("ImagesApp"))
@@ -34,34 +34,35 @@ def page_urls(text, page):
 def download_images(base, folder, total=1000):
     os.makedirs(folder, exist_ok=True)
     seen, saved = set(), 0
-    page = 0
-    while saved < total:
-        urls = page_urls(base, page)
-        if not urls:
-            break
-        new = 0
-        for url in urls:
-            if saved >= total:
+    for extra in ({"iorient": o} for o in ("horizontal", "vertical", "square")):
+        page = 0
+        while saved < total:
+            urls = page_urls(base, page, extra)
+            if not urls:
                 break
-            if url in seen:
-                continue
-            seen.add(url)
-            new += 1
-            try:
-                r = requests.get(url, headers=HEADERS, timeout=15)
-                if r.status_code != 200 or "jpeg" not in r.headers.get("Content-Type", ""):
+            new = 0
+            for url in urls:
+                if saved >= total:
+                    break
+                if url in seen:
                     continue
-            except requests.RequestException:
-                continue
-            with open(os.path.join(folder, f"{saved:04d}.jpg"), "wb") as f:
-                f.write(r.content)
-            saved += 1
-            if saved % 50 == 0:
-                print(f"  {base}: {saved}/{total}")
-        if new == 0:
-            break
-        page += 1
-        time.sleep(1.2)
+                seen.add(url)
+                new += 1
+                try:
+                    r = requests.get(url, headers=HEADERS, timeout=15)
+                    if r.status_code != 200 or "jpeg" not in r.headers.get("Content-Type", ""):
+                        continue
+                except requests.RequestException:
+                    continue
+                with open(os.path.join(folder, f"{saved:04d}.jpg"), "wb") as f:
+                    f.write(r.content)
+                saved += 1
+                if saved % 50 == 0:
+                    print(f"  {base}: {saved}/{total}")
+            if new == 0:
+                break
+            page += 1
+            time.sleep(1.2)
 
 
 if __name__ == "__main__":
