@@ -66,5 +66,5 @@ def download_images(base, folder, total=1000):
 
 
 if __name__ == "__main__":
-    download_images("rose", "dataset/rose", total=1000)
-    download_images("tulip", "dataset/tulip", total=1000)
+    download_images("rose flower", "dataset/rose", total=1000)
+    download_images("tulip flower", "dataset/tulip", total=1000)
