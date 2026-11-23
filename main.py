@@ -1,4 +1,7 @@
+import csv
 import os, json, time, requests
+from datetime import datetime, timezone
+
 from bs4 import BeautifulSoup
 
 HEADERS = {
@@ -6,6 +9,8 @@ HEADERS = {
                   "(KHTML, like Gecko) Chrome/122.0 Safari/537.36",
     "Accept-Language": "ru-RU,ru;q=0.9,en-US;q=0.8,en;q=0.7",
 }
+
+META_COLS = ["date", "url", "filename", "class"]
 
 
 def page_urls(text, page, extra):
@@ -33,7 +38,9 @@ def page_urls(text, page, extra):
 
 def download_images(base, folder, total=1000):
     os.makedirs(folder, exist_ok=True)
-    seen, saved = set(), 0
+    seen = set()
+    rows_meta = []
+    saved = 0
     for extra in ({"iorient": o} for o in ("horizontal", "vertical", "square")):
         page = 0
         while saved < total:
@@ -48,14 +55,25 @@ def download_images(base, folder, total=1000):
                     continue
                 seen.add(url)
                 new += 1
+
                 try:
                     r = requests.get(url, headers=HEADERS, timeout=15)
                     if r.status_code != 200 or "jpeg" not in r.headers.get("Content-Type", ""):
                         continue
                 except requests.RequestException:
                     continue
-                with open(os.path.join(folder, f"{saved:04d}.jpg"), "wb") as f:
+
+                path = os.path.join(folder, f"{saved:04d}.jpg")
+                with open(path, "wb") as f:
                     f.write(r.content)
+
+                    rows_meta.append({
+                        "date": datetime.now(timezone.utc).isoformat(timespec="seconds"),
+                        "url": url,
+                        "filename": f"{saved:04d}.jpg",
+                        "class": base,
+                    })
+
                 saved += 1
                 if saved % 50 == 0:
                     print(f"  {base}: {saved}/{total}")
@@ -64,7 +82,19 @@ def download_images(base, folder, total=1000):
             page += 1
             time.sleep(1.2)
 
+    return rows_meta
+
+
+def append_metadata(rows, csv_path):
+    write_header = not os.path.exists(csv_path) or os.path.getsize(csv_path) == 0
+    with open(csv_path, "a", newline="", encoding="utf-8") as f:
+        w = csv.DictWriter(f, fieldnames=META_COLS)
+        if write_header:
+            w.writeheader()
+        w.writerows(rows)
+
 
 if __name__ == "__main__":
-    download_images("rose flower", "dataset/rose", total=1000)
-    download_images("tulip flower", "dataset/tulip", total=1000)
+    csv_path = "./metadata.csv"
+    for base in ("rose", "tulip"):
+        append_metadata(download_images(base, f"dataset/{base}", total=1000), csv_path)
