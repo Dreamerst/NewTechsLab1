@@ -36,7 +36,7 @@ def page_urls(text, page, extra):
     return urls
 
 
-def download_images(base, class_label, folder, total=100):
+def download_images(base, class_label, folder, total=1000):
     os.makedirs(folder, exist_ok=True)
     seen = set()
     rows_meta = []
@@ -76,7 +76,7 @@ def download_images(base, class_label, folder, total=100):
 
                 saved += 1
                 if saved % 50 == 0:
-                    print(f"  {base}: {saved}/{total}")
+                    print(f"  {class_label}: {saved}/{total}")
             if new == 0:
                 break
             page += 1
