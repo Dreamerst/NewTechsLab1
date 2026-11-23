@@ -36,7 +36,7 @@ def page_urls(text, page, extra):
     return urls
 
 
-def download_images(base, folder, total=1000):
+def download_images(base, class_label, folder, total=100):
     os.makedirs(folder, exist_ok=True)
     seen = set()
     rows_meta = []
@@ -71,7 +71,7 @@ def download_images(base, folder, total=1000):
                         "date": datetime.now(timezone.utc).isoformat(timespec="seconds"),
                         "url": url,
                         "filename": f"{saved:04d}.jpg",
-                        "class": base,
+                        "class": class_label,
                     })
 
                 saved += 1
@@ -96,5 +96,7 @@ def append_metadata(rows, csv_path):
 
 if __name__ == "__main__":
     csv_path = "./metadata.csv"
-    for base in ("rose", "tulip"):
-        append_metadata(download_images(base, f"dataset/{base}", total=1000), csv_path)
+    queries = {"rose": "rose flower", "tulip": "tulip flower"}
+    for class_label, query in queries.items():
+        rows = download_images(query, class_label, f"dataset/{class_label}")
+        append_metadata(rows, csv_path)
